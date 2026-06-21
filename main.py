@@ -19,16 +19,16 @@ from modules.normalizer import normalize_image_result, normalize_claim_result
 from modules.evidence_checker import check_evidence
 from modules.risk_analyzer import analyze_risk
 from modules.decision_engine import decide
-from models.schemas import OutputRow
+from models.schemas import OutputRow, DecisionResult, EvidenceCheckResult
 
 
 def build_output_row(
     claim: pd.Series,
-    decision,
-    evidence_result,
+    decision: DecisionResult,
+    evidence_result: EvidenceCheckResult,
 ) -> dict:
-    """Assemble the final output dict from all pipeline results."""
-    risk_flags = decision.all_risk_flags
+    """Assemble the final output dict. Converts bools to lowercase strings here only."""
+    risk_flags = decision.risk_flags
     risk_str = ";".join(risk_flags) if risk_flags else "none"
 
     supporting = decision.supporting_image_ids
@@ -39,6 +39,7 @@ def build_output_row(
         image_paths=claim["image_paths"],
         user_claim=claim["user_claim"],
         claim_object=claim["claim_object"],
+        # Bool → string conversion happens only here
         evidence_standard_met=str(evidence_result.evidence_standard_met).lower(),
         evidence_standard_met_reason=evidence_result.evidence_standard_met_reason,
         risk_flags=risk_str,
@@ -86,7 +87,6 @@ def process_claim(
     claim_result = normalize_claim_result(claim_result, claim_object)
 
     print(f"  [4/5] Checking evidence + risk for {user_id}...")
-    # Use best valid image's issue_type for evidence check
     valid_issues = [
         r.issue_type for r in image_results
         if r.valid_image and r.issue_type not in ("unknown", "none")
@@ -124,7 +124,6 @@ def run(input_csv: Path, output_csv: Path) -> None:
     user_history = load_user_history(USER_HISTORY_CSV)
     requirements = load_evidence_requirements(EVIDENCE_REQUIREMENTS_CSV)
 
-    # Clear existing output file
     if output_csv.exists():
         output_csv.unlink()
 
@@ -140,7 +139,6 @@ def run(input_csv: Path, output_csv: Path) -> None:
             print(f"  ✓ Done → {row['claim_status']}\n")
         except Exception as e:
             print(f"  ✗ FAILED for {claim['user_id']}: {e}\n")
-            # Write a safe fallback row so we don't lose the claim
             fallback = {
                 "user_id": claim["user_id"],
                 "image_paths": claim["image_paths"],
