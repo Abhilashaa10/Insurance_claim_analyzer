@@ -6,7 +6,7 @@ from pathlib import Path
 import pandas as pd
 
 from config import (
-    BASE_DIR, CLAIMS_CSV, OUTPUT_CSV,
+    BASE_DIR,DATASET_DIR, CLAIMS_CSV, OUTPUT_CSV,
     USER_HISTORY_CSV, EVIDENCE_REQUIREMENTS_CSV,
 )
 from utils.csv_utils import (
@@ -70,7 +70,7 @@ def process_claim(
         user_id=user_id,
         image_paths_str=image_paths_str,
         claim_object=claim_object,
-        base_dir=BASE_DIR,
+        base_dir=DATASET_DIR,
     )
 
     print(f"  [2/5] Extracting claim for {user_id}...")
